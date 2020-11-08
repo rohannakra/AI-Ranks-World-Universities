@@ -23,15 +23,16 @@ import os
 # Getting workspace so I can re-route the path.
 print(f'Workspace: {os.getcwd()}')
 
-dataset = pd.DataFrame(pd.read_csv(os.path.join('Projects', 'World University Rankings', 'shanghai_data.csv')))
-
+dataset = pd.DataFrame(
+    pd.read_csv(
+        os.path.join('Projects/World University Rankings', 'shanghai_data.csv')
+    ))
 # Check which columns have null values.
 for col in dataset.columns:
     pct_missing = np.mean(dataset[col].isnull())
     print(f"Missing data % of '{col}' - {pct_missing*100:.2f}%")
 
-# Dropping columns and samples.
-dataset.drop(['national_rank', 'year'], axis=1, inplace=True)
+# Drop samples with null values.
 dataset.dropna(inplace=True)
 
 # Checking for duplicates. NOTE: world_rank will become the target.
@@ -55,7 +56,7 @@ university_names = dataset.loc[:, 'university_name'].to_numpy()
 print(f'Checking what data type target variables are {np.unique(target)}')
 
 # NOTE: target is specifically numbers 1 - 100. This can lead for the model to overfit.
-#       I will encode the variables so that they look like ('1-5').
+#       Encode the variables so that they look like ('1-5').
 
 boundaries = [6, 16, 26, 51, 76]
 target = np.array([bisect.bisect_left(boundaries, int(t)) for t in target])
@@ -70,13 +71,11 @@ print(f'data.shape -> {data.shape}')
 print(f'data.size -> {data.size}')
 print(f'target.shape -> {target.shape}')
 
+# ! DATA ANALYSIS
+
 # Check if there are a significant amount of zeros in the data.
-print(f'% of nonzeros in data -> {np.sum(data == 0)/data.size}')
+print(f'% of zeros in data -> {np.sum(data == 0)/data.size}')
 print(f'% of nonzeros in data -> {np.sum(data != 0)/data.size}')
-
-# -----------------------------------------------------------------------------------------------
-
-# Objective: Do some data exploration.
 
 tsne = TSNE(random_state=42)
 
@@ -190,7 +189,7 @@ scatter_pred = ax_2.scatter(data_trans[:, 0], data_trans[:, 1], c=bin_pred, labe
 
 ax_2.legend(*scatter_pred.legend_elements())
 
-ax_1.set_title('Labels')    # TODO: Fix.
+ax_1.set_title('Labels')
 ax_2.set_title('Predictions')
 
 plt.show()
