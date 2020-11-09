@@ -1,16 +1,16 @@
 # Objective: Rank universities based on a # of features
 
+# -----------------------------------------------------------------------------
+
+# ! IMPORT MODULES AND SET UP DATASET
+
 # Import sklearn tools
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.svm import SVC
-from sklearn.neural_network import MLPClassifier
+from sklearn.neural_network import MLPClassifier, MLPRegressor
 from sklearn.manifold import TSNE
-from sklearn.model_selection import train_test_split, GridSearchCV, cross_validate, cross_val_predict
+from sklearn.model_selection import cross_validate, cross_val_predict
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from IPython.display import display
 
 # Import other libraries
 import pandas as pd
@@ -23,10 +23,8 @@ import os
 # Getting workspace so I can re-route the path.
 print(f'Workspace: {os.getcwd()}')
 
-dataset = pd.DataFrame(
-    pd.read_csv(
-        os.path.join('Projects/World University Rankings', 'shanghai_data.csv')
-    ))
+dataset_path = os.path.join('Projects/World University Rankings', 'shanghai_data.csv')
+dataset = pd.read_csv(dataset_path)
 # Check which columns have null values.
 for col in dataset.columns:
     pct_missing = np.mean(dataset[col].isnull())
@@ -71,6 +69,8 @@ print(f'data.shape -> {data.shape}')
 print(f'data.size -> {data.size}')
 print(f'target.shape -> {target.shape}')
 
+# ------------------------------------------------------------------------------------
+
 # ! DATA ANALYSIS
 
 # Check if there are a significant amount of zeros in the data.
@@ -91,7 +91,7 @@ plt.show()
 
 # ----------------------------------------------------------------------------------------------------
 
-# Objective: Apply MLPClassifier to the data.
+# ! APPLY AI ALGORITHM TO DATASET.
 
 # Arguments for algorithm.
 mlp_args = {
@@ -138,7 +138,7 @@ print('Test Score w/ scaler: {} Test Score w/out: {}'.format(mlp_scores['test'],
 
 # ---------------------------------------------------------------------------------------------------------------------
 
-# Objective: Apply linear model to dataset.
+# ! TRY A LINEAR MODEL ON THE DATASET
 
 svm = cross_validate(SVC(kernel='linear'), data, target, **cross_validate_args)
 displayed_results = pd.DataFrame(svm)
@@ -155,7 +155,7 @@ print(svm_scores['test'])
 
 #  -------------------------------------------------------------------------
 
-# Objective - Visualize results.
+# ! VISUALIZE THE RESULTS
 
 if mlp_scores['test'] > svm_scores['test']:
     best_clf = mlp['estimator'][0]    # This will return the pipeline instead of just the MLP.
@@ -196,7 +196,7 @@ plt.show()
 
 # ---------------------------------------------------------------------------------------------
 
-# Objective - Show predictions for 25 random schools.
+# ! SHOW PREDICTIONS FOR 25 RANDOM SCHOOLS
 
 # Creating list to mutate.
 target_indices = list(range(len(target)))
@@ -209,4 +209,55 @@ for i in range(25):
 indices = set(indices)
 
 for index in indices:
-    print(f'\n----- {university_names[index]} -----\n Prediction -> {target_names[predictions[index]]}\n Target -> {target_names[target[index]]}\n')
+    print(f'\n----- {university_names[index]} -----\n '
+          f'Prediction -> {target_names[predictions[index]]}\n '
+          f'Target -> {target_names[target[index]]}\n')
+
+# -------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# ! MAKE DATASET A REGRESSION DATASET
+
+reg_target = dataset.loc[:, 'world_rank'].to_numpy()
+
+print(reg_target.dtype)    # -> int32 TODO: FIGURE OUT WHY THIS IS HAPPENING
+
+reg_target = reg_target.astype('int64')
+
+print(reg_target.dtype)    # -> int64
+
+# --------------------------------------------------------
+
+# ! APPLY REGRESSION MODEL TO DATA
+
+# Create regression pipe.
+pipe_reg = Pipeline([
+    ('scaler', StandardScaler()),
+    ('mlp', MLPRegressor(**mlp_args))
+])
+
+mlp_reg = cross_validate(pipe_reg, data, reg_target, **cross_validate_args)
+
+mlp_reg_scores = {
+    'train': np.average(mlp_reg['train_score']),
+    'test': np.average(mlp_reg['test_score'])
+}
+
+print('Train Score: {}'.format(mlp_reg_scores['train']))
+print('Test Scores: {}'.format(mlp_reg_scores['test']))
+
+# ----------------------------------------------------------------------
+
+predictions_reg = cross_val_predict(pipe, data, reg_target, cv=5, n_jobs=-1, verbose=100)
+target_indices = list(range(len(reg_target)))
+indices = []
+
+for i in range(25):
+    indices.append(choice(target_indices))
+
+# Get rid of coppies.
+indices = set(indices)
+
+for index in indices:
+    print(f'\n----- {university_names[index]} -----\n '
+          f'Prediction -> {predictions_reg[index]}\n '
+          f'Target -> {reg_target[index]}\n')
