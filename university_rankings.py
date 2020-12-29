@@ -18,6 +18,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from random import choice
+from scipy.special import expit
 
 # Load dataset
 dataset = pd.read_csv('shanghai_data.csv')
@@ -111,28 +112,30 @@ gs_params = {
     'n_jobs': -1,
 }
 
-svr = GridSearchCV(**gs_params)
+gs = GridSearchCV(**gs_params)
+gs.fit(X_train, y_train)
 
-svr.fit(X_train, y_train)
+svr = gs.best_estimator_
 
 # %% [markdown]
 # #### View the results of the algorithm
 
 # %%
+print(f'Algorithm: {svr}')
+
 pred_train = svr.predict(X_train)
 pred_test = svr.predict(X_test)
 
 print(f'Train MSE: {mean_squared_error(pred_train, y_train)}')
 print(f'Test MSE: {mean_squared_error(pred_test, y_test)}')
-print(f'Parameter used: {svr.best_params_}')
 
 # NOTE: anything below 500 is an ideal MSE.
 
-# Show predictions for 25 random schools.
+# Show predictions for 5 random schools.
 
 indexes = set()
 
-for i in range(25):
+for i in range(5):
     indexes.add(choice(range(len(X_test))))
 
 for index in indexes:
@@ -144,6 +147,16 @@ for index in indexes:
 # #### Plot the results
 
 # %%
+tsne = TSNE()
 
+X_test_trans = tsne.fit_transform(X_test)
+
+m = sorted(svr.coef_[0], reverse=True)[:2]    # get the most important features.
+b = svr.intercept_[0]
+loss = expit(X_test_trans * m + b)
+
+scatter = plt.scatter(X_test_trans[:, 0], X_test_trans[:, 1], c=y_test)
+plt.plot(X_test_trans, loss, c='red')
+plt.legend(*scatter.legend_elements())
 
 

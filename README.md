@@ -1,4 +1,4 @@
-# AI ranks universities
+# AI Ranks Universities
 
 Steps taken:
 * prepare dataset
@@ -13,3 +13,4 @@ Steps taken:
     * print the ```mean_squared_error()```
     * print predictions for 5 random schools.
 * plot the results
+	* use ```coef_``` and ```intercept_``` attributes to plot deciscion boundary
