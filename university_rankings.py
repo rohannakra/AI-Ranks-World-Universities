@@ -1,5 +1,8 @@
 # To add a new cell, type '# %%'
 # To add a new markdown cell, type '# %% [markdown]'
+# %%
+from IPython import get_ipython
+
 # %% [markdown]
 # ## Objective - Rank universities based on different features
 # %% [markdown]
@@ -19,6 +22,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from random import choice
 from scipy.special import expit
+from mlxtend.plotting import scatterplotmatrix
+get_ipython().run_line_magic('matplotlib', 'inline')
 
 # Load dataset
 dataset = pd.read_csv('shanghai_data.csv')
@@ -36,11 +41,14 @@ print('Duplication in dataset: {}'.format(dataset.duplicated(subset=['world_rank
 
 # NOTE: There are duplicates in the dataset because the rankings change every year, so the rankings are updated.
 
-# Split data into target and data variables.]
-data = dataset.loc[:, 'total_score':'pcp'].to_numpy()
+# Split data into target and data variables.
+data_df = dataset.loc[:, 'total_score':'pcp']
 
 # Encoding target colum (target is not continuous).
-target = dataset.loc[:, 'world_rank'].to_numpy()
+target_df = dataset.loc[:, 'world_rank']
+
+data = data_df.to_numpy()
+target = target_df.to_numpy()
 
 print('data.shape: {}'.format(data.shape))
 print('target.shape: {}'.format(target.shape))
@@ -87,16 +95,19 @@ print(f'y_test.shape: {y_test.shape}')
 print(f'% of zeros in data -> {np.sum(data == 0)/data.size}')
 print(f'% of nonzeros in data -> {np.sum(data != 0)/data.size}')
 
-# Plot the data.
-tsne = TSNE(random_state=42)
+# Check how each feature is correlated to the target.
+fig, axs = plt.subplots(2, 4, figsize=(11, 5.5))
+features = ['total_score', 'alumni', 'award', 'hici', 'ns', 'pub', 'pcp']
 
-data_trans = tsne.fit_transform(data)
+axs = [ax for ax in axs.ravel()]
 
-scatter_plot = plt.scatter(data_trans[:, 0], data_trans[:, 1], c=target)
-plt.legend(*scatter_plot.legend_elements())
-plt.show()
+for i in range(7):
+    axs[i].scatter(data[:, i], target)
+    axs[i].set_title(features[i])
 
-# NOTE: The data looks to be linearly seperable.
+# NOTE: total_score seems like the most correlated feature.
+# NOTE: It seems as if all of the features do not have a linear relationship towards the target variable.
+#       This means that a polynomial regression model would be preferred.
 
 # %% [markdown]
 # #### Apply model to the data.
@@ -140,23 +151,13 @@ for i in range(5):
 
 for index in indexes:
     print(f'\n----- {university_names[index]} -----')
-    print(f'\tPrediction: {svr.predict(X_test[index].reshape(1, -1))[0]}')
+    print(f'\tPrediction: {svr.predict(X_test[index].reshape(1, -1))[0]:.2f}')
     print(f'\tTarget: {y_test[index]}')
 
 # %% [markdown]
 # #### Plot the results
 
 # %%
-tsne = TSNE()
 
-X_test_trans = tsne.fit_transform(X_test)
-
-m = sorted(svr.coef_[0], reverse=True)[:2]    # get the most important features.
-b = svr.intercept_[0]
-loss = expit(X_test_trans * m + b)
-
-scatter = plt.scatter(X_test_trans[:, 0], X_test_trans[:, 1], c=y_test)
-plt.plot(X_test_trans, loss, c='red')
-plt.legend(*scatter.legend_elements())
 
 

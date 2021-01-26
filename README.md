@@ -6,7 +6,7 @@ Steps taken:
     * scale the data using ```StandardScaler()```
 * data analysis
     * check # of zeros in the data
-    * plot the data
+    * plot the data to check correlation of features to ```target``` variable
 * apply model to the data
     * use ```GridSearchCV``` to find best parameters
 * view the results of the algorithm
