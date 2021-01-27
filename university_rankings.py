@@ -10,10 +10,10 @@ from IPython import get_ipython
 
 # %%
 # Import sklearn tools
-from sklearn.svm import SVR
+from sklearn.linear_model import LinearRegression
 from sklearn.manifold import TSNE
 from sklearn.model_selection import GridSearchCV, train_test_split
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 from sklearn.metrics import mean_squared_error
 
 # Import other libraries
@@ -110,40 +110,42 @@ for i in range(7):
 #       This means that a polynomial regression model would be preferred.
 
 # %% [markdown]
-# #### Apply model to the data.
+# #### Use linear model on the data
 
 # %%
-param_grid = {
-    'C': [0.001, 0.01, 0.1, 1, 10]
-}
+lin_reg = LinearRegression()
 
-gs_params = {
-    'estimator': SVR(kernel='linear'),
-    'param_grid': param_grid,
-    'n_jobs': -1,
-}
+lin_reg.fit(X_train, y_train)
 
-gs = GridSearchCV(**gs_params)
-gs.fit(X_train, y_train)
+lin_train_pred = lin_reg.predict(X_train)
+lin_test_pred = lin_reg.predict(X_test)
 
-svr = gs.best_estimator_
+print(f'MSE Train: {mean_squared_error(y_train, lin_train_pred):.2f}')
+print(f'MSE Test: {mean_squared_error(y_test, lin_test_pred):.2f}')
 
 # %% [markdown]
-# #### View the results of the algorithm
+# #### Apply model to the data
 
 # %%
-print(f'Algorithm: {svr}')
+poly_reg = LinearRegression()
 
-pred_train = svr.predict(X_train)
-pred_test = svr.predict(X_test)
+quadratic = PolynomialFeatures(degree=2)
+X_train_poly = quadratic.fit_transform(X_train)
+X_test_poly = quadratic.transform(X_test)
 
-print(f'Train MSE: {mean_squared_error(pred_train, y_train)}')
-print(f'Test MSE: {mean_squared_error(pred_test, y_test)}')
+poly_reg.fit(X_train_poly, y_train)
 
-# NOTE: anything below 500 is an ideal MSE.
+poly_train_pred = poly_reg.predict(X_train_poly)
+poly_test_pred = poly_reg.predict(X_test_poly)
 
-# Show predictions for 5 random schools.
+print(f'MSE Train: {mean_squared_error(y_train, poly_train_pred)}')
+print(f'MSE Test: {mean_squared_error(y_test, poly_test_pred)}')
 
+# %% [markdown]
+# #### Test the algorithms
+
+# %%
+# Select 5 random schools and show different predictions.
 indexes = set()
 
 for i in range(5):
@@ -151,13 +153,23 @@ for i in range(5):
 
 for index in indexes:
     print(f'\n----- {university_names[index]} -----')
-    print(f'\tPrediction: {svr.predict(X_test[index].reshape(1, -1))[0]:.2f}')
+    print(f'\tPolynomial Regression Prediction: {poly_reg.predict(X_test_poly[index].reshape(1, -1))[0]:.2f}')
+    print(f'\tLinear Regression Prediction: {lin_reg.predict(X_test[index].reshape(1, -1))[0]:.2f}')
     print(f'\tTarget: {y_test[index]}')
 
 # %% [markdown]
-# #### Plot the results
+# #### Plot the results of the algorithm
 
 # %%
+slope_poly = poly_reg.coef_[0]
+slope_lin = lin_reg.coef_[0]
 
+intercept_poly = poly_reg.intercept_
+intercept_lin = lin_reg.intercept_
+
+plt.scatter(data[:, 0], target, label='Data Points', color='purple')
+plt.plot(data[:, 0], data[:, 0] * slope_poly + intercept_poly, label='Polynomial Regression')
+plt.plot(data[:, 0], data[:, 0] * slope_lin + intercept_lin, label='Linear Regression')
+plt.legend()
 
 
