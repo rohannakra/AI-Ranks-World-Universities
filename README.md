@@ -7,8 +7,6 @@ Steps taken:
 * data analysis
     * check # of zeros in the data
     * plot the data to check correlation of features to ```target``` variable
-* apply model to the data
-* view the results of the algorithm
-    * print predictions for 5 random schools.
+* apply models to the data
+* select 5 random schools and show predictions
 * plot the results
-	* use ```coef_``` and ```intercept_``` attributes to plot deciscion boundary

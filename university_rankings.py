@@ -14,7 +14,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.manifold import TSNE
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.preprocessing import StandardScaler, PolynomialFeatures
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, r2_score
 
 # Import other libraries
 import pandas as pd
@@ -44,7 +44,7 @@ print('Duplication in dataset: {}'.format(dataset.duplicated(subset=['world_rank
 # Split data into target and data variables.
 data_df = dataset.loc[:, 'total_score':'pcp']
 
-# Encoding target colum (target is not continuous).
+# Encoding target colum.
 target_df = dataset.loc[:, 'world_rank']
 
 data = data_df.to_numpy()
@@ -87,6 +87,9 @@ print(f'y_train.shape: {y_train.shape}')
 print(f'X_test.shape: {X_test.shape}')
 print(f'y_test.shape: {y_test.shape}')
 
+# NOTE: If you would like to see what the features stand for visit: 
+#       https://www.kaggle.com/mylesoneill/world-university-rankings?select=shanghaiData.csv
+
 # %% [markdown]
 # #### Data analysis
 
@@ -101,18 +104,20 @@ features = ['total_score', 'alumni', 'award', 'hici', 'ns', 'pub', 'pcp']
 
 axs = [ax for ax in axs.ravel()]
 
+# Scatter the data.
 for i in range(7):
     axs[i].scatter(data[:, i], target)
     axs[i].set_title(features[i])
 
 # NOTE: total_score seems like the most correlated feature.
 # NOTE: It seems as if all of the features do not have a linear relationship towards the target variable.
-#       This means that a polynomial regression model would be preferred.
+#       This means that a polynomial regression model would be preferred over a linear one.
 
 # %% [markdown]
 # #### Use linear model on the data
 
 # %%
+# Create linear model.
 lin_reg = LinearRegression()
 
 lin_reg.fit(X_train, y_train)
@@ -120,8 +125,16 @@ lin_reg.fit(X_train, y_train)
 lin_train_pred = lin_reg.predict(X_train)
 lin_test_pred = lin_reg.predict(X_test)
 
+# Test for mean squared error.
 print(f'MSE Train: {mean_squared_error(y_train, lin_train_pred):.2f}')
 print(f'MSE Test: {mean_squared_error(y_test, lin_test_pred):.2f}')
+
+# Test for R2 score.
+print(f'R2 Train: {r2_score(y_train, lin_train_pred)*100:.2f}')
+print(f'R2 Test: {r2_score(y_test, lin_test_pred)*100:.2f}')
+
+# NOTE: This evaluation method is a standardized version of the MSE.
+#       It is usually used for better interpretability of the model's performance.
 
 # %% [markdown]
 # #### Apply model to the data
@@ -129,23 +142,30 @@ print(f'MSE Test: {mean_squared_error(y_test, lin_test_pred):.2f}')
 # %%
 poly_reg = LinearRegression()
 
-quadratic = PolynomialFeatures(degree=2)
+# Edit the data to make features polynomial.
+quadratic = PolynomialFeatures()
 X_train_poly = quadratic.fit_transform(X_train)
 X_test_poly = quadratic.transform(X_test)
 
+# Fit the model on the transformed data.
 poly_reg.fit(X_train_poly, y_train)
 
 poly_train_pred = poly_reg.predict(X_train_poly)
 poly_test_pred = poly_reg.predict(X_test_poly)
 
+# Test MSE.
 print(f'MSE Train: {mean_squared_error(y_train, poly_train_pred)}')
 print(f'MSE Test: {mean_squared_error(y_test, poly_test_pred)}')
 
+# Test R2.
+print(f'R2 Train: {r2_score(y_train, poly_train_pred)}')
+print(f'R2 Test: {r2_score(y_test, poly_test_pred)}')
+
 # %% [markdown]
-# #### Test the algorithms
+# #### Select 5 random schools and show different predictions
 
 # %%
-# Select 5 random schools and show different predictions.
+# Create indexes variable that holds a set(). This is to avoid redundancy.
 indexes = set()
 
 for i in range(5):
@@ -161,15 +181,28 @@ for index in indexes:
 # #### Plot the results of the algorithm
 
 # %%
-slope_poly = poly_reg.coef_[0]
-slope_lin = lin_reg.coef_[0]
+indexes = []
 
-intercept_poly = poly_reg.intercept_
-intercept_lin = lin_reg.intercept_
+for i in range(1, 100, 5):
+    try:
+        index = np.where(y_test == i)[0][0]
+    except IndexError:
+        index = np.where(y_test  == i + 1)[0][0]
+    else:
+        indexes.append(index)
 
-plt.scatter(data[:, 0], target, label='Data Points', color='purple')
-plt.plot(data[:, 0], data[:, 0] * slope_poly + intercept_poly, label='Polynomial Regression')
-plt.plot(data[:, 0], data[:, 0] * slope_lin + intercept_lin, label='Linear Regression')
-plt.legend()
+samples_target = y_test[indexes]
+samples = X_test[indexes]
+
+samples_pred = {
+    'poly': poly_reg.predict(quadratic.transform(samples)),
+    'lin': lin_reg.predict(samples)
+}
+
+plt.scatter(samples[:, 0], samples_target, label='Data Points', color='purple')
+plt.plot(samples[:, 0], samples_pred['poly'], label='Polynomial Regression')
+plt.plot(samples[:, 0], samples_pred['lin'], label='Linear Regression')
+
+plt.legend(loc='upper right')
 
 
