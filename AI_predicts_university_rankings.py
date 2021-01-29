@@ -13,13 +13,14 @@ from IPython import get_ipython
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, PolynomialFeatures
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import r2_score
 
 # Import other libraries
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from random import choice
+from scipy import interpolate
 get_ipython().run_line_magic('matplotlib', 'inline')
 
 # Load dataset
@@ -111,7 +112,7 @@ for i in range(7):
 #       This means that a polynomial regression model would be preferred over a linear one.
 
 # %% [markdown]
-# #### Use linear model on the data
+# #### Apple models to the data
 
 # %%
 # Create linear model.
@@ -119,23 +120,6 @@ lin_reg = LinearRegression()
 
 lin_reg.fit(X_train, y_train)
 
-lin_train_pred = lin_reg.predict(X_train)
-lin_test_pred = lin_reg.predict(X_test)
-
-# Test for mean squared error.
-print(f'MSE Train: {mean_squared_error(y_train, lin_train_pred):.2f}')
-print(f'MSE Test: {mean_squared_error(y_test, lin_test_pred):.2f}')
-
-# Test for R2 score.
-print(f'R2 Train: {r2_score(y_train, lin_train_pred)*100:.2f}')
-print(f'R2 Test: {r2_score(y_test, lin_test_pred)*100:.2f}')
-
-# NOTE: R2 score is a standardized version of MSE & used for interpretability of performance.
-
-# %% [markdown]
-# #### Apply model to the data
-
-# %%
 poly_reg = LinearRegression()
 
 # Edit the data to make features polynomial.
@@ -144,43 +128,23 @@ X_train_poly = quadratic.fit_transform(X_train)
 X_test_poly = quadratic.transform(X_test)
 
 # Fit the model on the transformed data.
-poly_reg.fit(X_train_poly, y_train)
+poly_reg.fit(X_train_poly, y_train);
 
-poly_train_pred = poly_reg.predict(X_train_poly)
-poly_test_pred = poly_reg.predict(X_test_poly)
 
-# Test MSE.
-print(f'MSE Train: {mean_squared_error(y_train, poly_train_pred):.2f}')
-print(f'MSE Test: {mean_squared_error(y_test, poly_test_pred):.2f}')
-
-# Test R2.
-print(f'R2 Train: {r2_score(y_train, poly_train_pred)*100:.2f}%')
-print(f'R2 Test: {r2_score(y_test, poly_test_pred)*100:.2f}%')
-
-# %% [markdown]
-# #### Select 5 random schools and show different predictions
-
-# %%
-# Create indexes variable that holds a set(). This is to avoid redundancy.
-indexes = set()
-
-for i in range(5):
-    indexes.add(choice(range(len(X_test))))
-
-for index in indexes:
-    print(f'\n----- {university_names[index]} -----')
-    print(f'\tPolynomial Regression Prediction: {poly_reg.predict(X_test_poly[index].reshape(1, -1))[0]:.2f}')
-    print(f'\tLinear Regression Prediction: {lin_reg.predict(X_test[index].reshape(1, -1))[0]:.2f}')
-    print(f'\tTarget: {y_test[index]}')
+# NOTE: the ';' suppresses the output of the jupyter cell.
 
 # %% [markdown]
 # #### Plot the results of the algorithm
 
 # %%
+# Get the R2 scores of the algorithms.
+poly_score = r2_score(y_test, poly_reg.predict(X_test_poly))*100
+lin_score = r2_score(y_test, lin_reg.predict(X_test))*100
+
 indexes = []
 
 # Select random samples.
-for i in range(1, 100, 5):
+for i in range(1, 101, 5):
     try:
         index = np.where(y_test == i)[0][0]
     except IndexError:
@@ -198,10 +162,39 @@ samples_pred = {
 }
 
 # Scatter data and see how predictions differ.
-plt.scatter(samples[:, 0], samples_target, label='Data Points', color='purple')
-plt.plot(samples[:, 0], samples_pred['poly'], label='Polynomial Regression')
-plt.plot(samples[:, 0], samples_pred['lin'], label='Linear Regression')
+plt.scatter(
+    samples[:, 0], 
+    samples_target, 
+    label=f'Data Points', color='purple')
+
+# Plot poly_reg predictions.
+plt.plot(
+    samples[:, 0],
+    samples_pred['poly'],
+    label=f'Polynomial Regression; $R^2 = {poly_score:.2f}$%')
+
+# Plot lin_reg predictions.
+plt.plot(
+    samples[:, 0],
+    samples_pred['lin'],
+    label=f'Linear Regression; $R^2 = {lin_score:.2f}$%')
 
 plt.legend(loc='best')
+
+# %% [markdown]
+# #### Select 5 random schools and show different predictions
+
+# %%
+# Create indexes variable that holds a set(). This is to avoid redundancy.
+indexes = set()
+
+for i in range(5):
+    indexes.add(choice(range(len(X_test))))
+
+for index in indexes:
+    print(f'\n----- {university_names[index]} -----')
+    print(f'\tPolynomial Regression Prediction: {poly_reg.predict(X_test_poly[index].reshape(1, -1))[0]:.2f}')
+    print(f'\tLinear Regression Prediction: {lin_reg.predict(X_test[index].reshape(1, -1))[0]:.2f}')
+    print(f'\tTarget: {y_test[index]}')
 
 
